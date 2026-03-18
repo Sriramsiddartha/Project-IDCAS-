@@ -1,0 +1,113 @@
+.file-upload-container {
+  max-width: 600px;
+  margin: 40px auto;
+  text-align: center;
+}
+
+.upload-area {
+  padding: 60px 40px;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  border: 2px dashed rgba(0, 112, 243, 0.1);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.upload-area:hover,
+.upload-area.dragging {
+  background: #ffffff;
+  border-color: var(--accent-color);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05);
+  transform: translateY(-5px);
+}
+
+.upload-icon {
+  width: 64px;
+  height: 64px;
+  color: var(--accent-color);
+  background: rgba(0, 112, 243, 0.05);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-smooth);
+}
+
+.upload-area:hover .upload-icon {
+  background: var(--accent-gradient);
+  color: white;
+}
+
+.upload-text h3 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.5rem;
+  margin-bottom: 8px;
+  color: var(--text-main);
+}
+
+.upload-text p {
+  color: var(--text-muted);
+  font-size: 1rem;
+}
+
+.file-types {
+  margin-top: 10px;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.type-badge {
+  padding: 6px 16px;
+  background: #f1f5f9;
+  border: 1px solid rgba(0, 0, 0, 0.03);
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.upload-btn {
+  margin-top: 30px;
+  padding: 14px 40px;
+  background: #ffffff;
+  color: var(--text-main);
+  border: 1px solid #e2e8f0;
+  font-size: 1rem;
+}
+
+.upload-btn:hover {
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+.loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+.spinner {
+  border: 3px solid rgba(0, 112, 243, 0.1);
+  border-top: 3px solid var(--accent-color);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}

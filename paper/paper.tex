@@ -1,0 +1,379 @@
+\documentclass[conference]{IEEEtran}
+
+\IEEEoverridecommandlockouts
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{parskip}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\begin{document}
+
+\title{IDCAS: A Web-Based Intelligent Data Cleaning and Analysis System}
+
+\author{
+\IEEEauthorblockN{Bandaru Sriram Siddartha}
+\IEEEauthorblockA{
+\textit{Department of Computer Science and Engineering} \\
+\textit{B.V. Raju Institute of Technology} \\
+Narsapur, Medak, India \\
+Roll No: 23211A0523 \\
+Email: 23211a0523@bvrit.ac.in
+}
+\and
+\IEEEauthorblockN{Dr. Jyothirmai}
+\IEEEauthorblockA{
+\textit{Assistant Professor} \\
+\textit{Department of Computer Science and Engineering} \\
+\textit{B.V. Raju Institute of Technology} \\
+Narsapur, Medak, India
+}
+}
+
+\maketitle
+
+\begin{abstract}
+Data science projects often slow down not because of modeling, but because of the repetitive work required to clean and prepare datasets for analysis. This paper presents the Intelligent Data Cleaning and Analysis System (IDCAS), a web-based full-stack application that streamlines data preparation and offers expert-style guidance on data readiness. IDCAS ingests tabular data from CSV and PDF files, computes a deterministic data quality score, and introduces an AI-driven configuration engine that automatically suggests optimal cleaning parameters using a locally hosted Llama~3 model via Ollama. By processing a compact statistical meta-profile instead of raw data, the system maintains privacy while providing real-time critiques and model recommendations. A key novelty of IDCAS is its ability to export the entire cleaning pipeline as a reproducible Jupyter Notebook (.ipynb), bridging the gap between automated GUI-based cleaning and standard code-centric research workflows. The platform maintains a complete audit trail of all transformations, reducing routine preprocessing work for practitioners while ensuring the overall process remains transparent, decisive, and fully reproducible.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Data Cleaning, Exploratory Data Analysis (EDA), Web-Based Application, FastAPI, React.js, Pandas, Local LLM, Llama~3, Ollama, Data Quality Scoring, Outlier Detection, Machine Learning.
+\end{IEEEkeywords}
+
+\section{Introduction}
+
+In many organizations, building machine learning solutions is constrained less by model choice and more by the effort needed to obtain clean, reliable data. Practitioners repeatedly report that data collection, cleaning, and organization consume a large portion of project time, often leaving limited capacity for exploratory analysis, feature engineering, and model evaluation. While a number of tools exist for profiling and cleaning data, they frequently suffer from at least one of three limitations: they operate as opaque ``black boxes,'' they expose only a narrow set of configurable options, or they require rigid workflows that do not align well with how data scientists actually work.
+
+The Intelligent Data Cleaning \& Analysis System (IDCAS) is designed to address these gaps through a hybrid approach that combines deterministic statistical methods with the flexibility of a local large language model. The system follows a linear workflow that resembles the way many data scientists naturally work: a user logs in, uploads a dataset, and can immediately trigger an ``AI Auto-Suggest'' feature that recommends optimal cleaning configurations (e.g., IQR vs.\ Z-score, specific null treatments) based on the dataset's meta-profile. After reviewing and applying these strategies through an interactive interface, the user can consult an embedded AI assistant for deeper analysis. A significant differentiator of IDCAS is its ``Notebook-to-Code Pipeline,'' which allows users to download a fully documented Python Jupyter Notebook that reproduces the exact cleaning steps executed in the GUI. Alongside this guidance, the system records every transformation in an audit trail and exports the cleaned dataset and a markdown report, making the overall process easier to review, reproduce, and present in collaborative settings.
+
+\section{Literature Survey}
+
+Data cleaning is widely recognized as one of the most time-consuming and error-prone stages in the data science lifecycle, motivating extensive research into automated and semi-automated solutions. In recent years, large language models (LLMs) have emerged as promising tools for assisting data cleaning tasks. Recent work on data-centric AI emphasizes that improving data quality often has a greater impact on downstream system performance than changes in model architecture~\cite{ref1}. This perspective has motivated increased attention toward systematic data profiling, cleaning, and validation as first-class components of machine learning workflows.
+
+Zhang et al.\ introduce Cocoon, a data cleaning system that formulates cleaning tasks as program synthesis over tabular data~\cite{ref2}. By leveraging LLMs to generate transformation and repair operations from schema information and natural language descriptions, Cocoon demonstrates flexibility across diverse cleaning requirements. Similarly, Biester et al.\ propose LLMClean, a context-aware framework that employs LLM-generated ontology-based functional dependencies to guide tabular data repairs~\cite{ref3}. While LLMClean improves repair quality through semantic reasoning, its focus remains on constraint discovery and repair rather than interactive workflows or explicit data quality assessment.
+
+Beyond individual systems, Zhu et al.\ present a comprehensive survey examining how artificial intelligence intersects with relational data cleaning~\cite{ref4}. Their work categorizes existing methods into rule learning, anomaly detection, and repair strategies, and highlights both the potential and challenges of AI-driven cleaning approaches.
+
+In parallel, several studies investigate traditional machine-learning-based automation of data cleaning. A 2025 study in the \textit{Asian Journal of Research in Computer Science} explores the use of machine learning models to detect outliers and erroneous records in large-scale databases~\cite{ref5}. Similarly, research published in the \textit{International Journal of Computer Trends and Technology} discusses AI-powered data cleansing techniques focused on anomaly detection and pattern learning to ensure database integrity~\cite{ref6}. Although effective at scale, these approaches often operate as black-box systems with limited user control.
+
+Another line of work emphasizes structured workflows and governance frameworks for real-world data cleaning. The \textit{Interactive Journal of Medical Research} outlines standard data cleaning workflows and stresses the importance of systematic validation, documentation, and reproducibility~\cite{ref7}. Likewise, a data-quality framework presented in \textit{Australian Critical Care} demonstrates how structured quality checks and explicit logging can support trustworthy analysis in applied research settings~\cite{ref8}.
+
+Earlier foundational research explored the integration of data cleaning with model training. Krishnan et al.\ introduce ActiveClean, an interactive framework that prioritizes cleaning records most likely to improve statistical model performance~\cite{ref9}. More recently, work presented at the AAAI/ACM Conference on AI, Ethics, and Society examines data cleaning from ethical and social perspectives, arguing that cleaning decisions embed discretionary and value-driven judgments in addition to technical considerations~\cite{ref10}.
+
+In contrast to prior approaches, the proposed Intelligent Data Cleaning and Analysis System (IDCAS) adopts a hybrid strategy that combines deterministic data quality scoring, configurable user-driven cleaning operations, and local LLM-based critique within a single web-based platform. By emphasizing transparency, auditability, and end-to-end user interaction, IDCAS aims to bridge the gap between automated intelligence and practical, reproducible data preparation workflows.
+
+\section{Related Work}
+
+In many practical settings, data cleaning is still carried out through ad hoc scripts and notebook workflows written in tools such as Python with Pandas, R, or SQL. Data scientists typically combine custom code for handling missing values, removing duplicates, transforming columns, and detecting outliers with separate scripts or libraries for exploratory data analysis and visualization. Although this approach is flexible and powerful, it depends heavily on individual expertise, offers limited standardization across projects, and often lacks a unified way to quantify data quality or maintain a detailed record of the cleaning decisions that were applied.
+
+Alongside code-centric workflows, several visual data preparation tools and platforms have emerged that provide graphical interfaces for profiling and transforming datasets. Tools such as OpenRefine and commercial data wrangling solutions support operations like type conversion, normalization, deduplication, and basic anomaly detection through point-and-click interactions rather than hand-written code. These systems can speed up routine cleaning tasks and make them accessible to non-programmers, but they usually treat data preparation as an isolated stage: they offer limited guidance about whether the processed data is suitable for specific machine learning tasks, they rarely expose a formal data quality scoring mechanism, and they typically do not integrate conversational AI to critique or explain cleaning choices in the context of downstream modeling.
+\section{System Architecture}
+
+The web-based Intelligent Data Cleaning and Analysis System (IDCAS) follows a modular client--server architecture that separates user interaction, API orchestration, data processing, and AI-driven analysis. At a high level, the system consists of a React.js frontend, a FastAPI backend, a data processing engine built on Pandas and NumPy, a PDF extraction component using Tabula-py, and a local LLM layer powered by Llama~3 through Ollama. These components communicate through well-defined REST endpoints, allowing the system to remain extensible while keeping each layer focused on a specific responsibility.
+
+On the client side, the React.js application provides all user-facing functionality, including authentication, file upload, data preview, visualization, cleaning configuration, and interaction with the AI assistant. Dedicated components such as Login, FileUpload, DataPreview, DataVisualization, CleaningOptions, and LLMChat manage state through React hooks and communicate with the backend using HTTP requests. This design enables a smooth single-page application experience in which users can move linearly from data ingestion to cleaning and AI-assisted analysis without leaving the browser.
+
+The backend is implemented using FastAPI, which exposes asynchronous endpoints for file upload, data profiling, cleaning, and LLM queries. When a user uploads a CSV or PDF, the file is sent to the /upload endpoint, where CSV files are loaded directly into Pandas data frames and PDF files are parsed via Tabula-py to extract tabular content. The data processing engine then computes summary statistics and a deterministic data quality score based on missing values, duplicates, constant columns, and skewed numerical attributes, and returns these metrics to the frontend for display. When the user configures cleaning strategies and submits them through the /clean endpoint, Pandas and NumPy perform vectorized operations for imputing nulls, handling outliers with IQR or Z-score methods, normalizing text, and dropping or transforming records, while an internal audit module logs each operation for provenance.
+
+For AI-driven analysis, the backend maintains a lightweight integration with a locally hosted Llama~3 model via the Ollama API. Instead of streaming full datasets, the system constructs a compact statistical meta-profile that summarizes key properties such as dataset shape, null patterns, data quality score, and the list of cleaning actions applied so far. This profile is used by two sub-modules: the AI Configuration Engine, which suggests initial cleaning parameters, and the AI Assistant, which provides natural-language feedback and modeling strategies. The system's novelty is finalized in the Code Generation Layer, which maps the internal audit trail to equivalent vectorized Pandas code to generate a runnable Jupyter Notebook. Finally, once cleaning is complete, the user can download the cleaned CSV, the Markdown audit report, and the reproducible Python notebook.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.95\linewidth]{archdiag.png}
+    \caption{IDCAS three-layer architecture diagram showing Application Layer (React), API/Service Layer (FastAPI), and Data \& Model Layer (storage and LLM).}
+    \label{fig:archdiag}
+\end{figure}
+
+\section{Proposed List of Modules}
+
+\subsection*{Module 1: User Authentication and Session Management}
+This module handles user login, basic access control, and session tracking within the web interface. It ensures that each user's uploaded datasets, cleaning configurations, and reports remain isolated and can be managed independently during a session.
+
+\subsection*{Module 2: Data Ingestion and Parsing Module}
+This module accepts CSV and PDF files from the frontend and passes them to the backend for parsing. CSV files are loaded directly into Pandas data frames, while PDF files are processed using Tabula-py to extract tabular content suitable for analysis. The module performs initial type detection and basic validation to ensure that the uploaded data is structurally consistent.
+
+\subsection*{Module 3: Data Profiling and Quality Scoring Module}
+After successful ingestion, this module computes summary statistics and a deterministic data quality score for the dataset. It calculates metrics such as the proportion of missing values, the number of duplicate records, the presence of constant columns, and the degree of skewness in numerical attributes, and aggregates these into a single quality score that is returned to the user interface for interpretation.
+
+\subsection*{Module 4: Exploratory Data Analysis and Visualization Module}
+This module generates an initial ``dirty data'' view along with basic visualizations to help users understand the current state of the dataset. It supports tabular previews, histograms for numerical features, bar charts for categorical variables, and other standard EDA outputs that are rendered on the frontend to guide subsequent cleaning decisions.
+
+\subsection*{Module 5: Data Cleaning and Transformation Module}
+This core module applies user-selected cleaning strategies using efficient, vectorized operations in Pandas and NumPy. It supports different treatments for numerical and textual null values, duplicate removal, outlier handling through IQR or Z-score methods, and text formatting operations such as trimming whitespace or normalizing case. All transformations are executed on the backend and are recorded in a structured audit log.
+
+\subsection*{Module 6: AI Assistant and Configuration Suggestion Module}
+This module is responsible for constructing the statistical meta-profile of the dataset and communicating with the locally hosted Llama~3 model via the Ollama interface. It triggers a specific ``Auto-Suggest'' routine that returns optimal JSON-formatted cleaning parameters (e.g., outlier thresholds and null strategies) by analyzing the dataset's skewness and missingness. It also provides the conversational AI interface where the LLM critiques user decisions and suggests suitable modeling approaches based on the dataset's final state.
+
+\subsection*{Module 7: Audit Trail and Reporting Module}
+This module maintains a provenance log of all operations executed on the dataset, including the order of transformations and configuration choices. At the end of the workflow, it uses this log to generate a human-readable markdown report that documents the cleaning pipeline and the resulting data quality.
+
+\subsection*{Module 8: Jupyter Notebook Generation Module}
+This novel module translates the structured audit trail into runnable Python code. It generates a `.ipynb` file that includes all necessary library imports, data loading instructions, and the exact vectorized operations used during the session. This ensures that the cleaning performed in the web interface is 100\% reproducible in any standard data science environment.
+
+\section{Algorithm Explanation}
+
+This section describes the main algorithms implemented in the proposed system: (i) data quality scoring and (ii) outlier detection and treatment.
+
+\subsection{Algorithm 1: Data Quality Scoring}
+
+The data quality scoring algorithm computes a single score in the range $[0, 100]$ based on four common data quality issues: missing values, duplicate rows, constant columns, and skewed numerical attributes.
+
+\textbf{Input:} Dataset $D$ with $N$ rows and $M$ columns.
+
+\textbf{Output:} Final data quality score $\text{Score}_{\text{final}}$.
+
+\begin{enumerate}
+  \item Initialize the base score: Set $\text{Score}_{\text{final}} \leftarrow 100$.
+  
+  \item Compute missing value penalty $P_{\text{null}}$:
+  \begin{enumerate}
+    \item Count total cells: $\text{total\_cells} = N \times M$.
+    \item Count null cells: $\text{null\_cells}$.
+    \item Compute null percentage: $p_{\text{null}} = \frac{\text{null\_cells}}{\text{total\_cells}} \times 100$.
+    \item Set $P_{\text{null}} = \min(40, p_{\text{null}})$.
+  \end{enumerate}
+
+  \item Compute duplicate row penalty $P_{\text{dup}}$:
+  \begin{enumerate}
+    \item Count duplicate rows: $\text{duplicate\_rows}$.
+    \item Compute duplicate percentage: $p_{\text{dup}} = \frac{\text{duplicate\_rows}}{N} \times 100$.
+    \item Set $P_{\text{dup}} = \min(20, p_{\text{dup}})$.
+  \end{enumerate}
+
+  \item Compute constant column penalty $P_{\text{const}}$:
+  \begin{enumerate}
+    \item Count columns with one unique value: $\text{cols\_1\_unique}$.
+    \item Compute constant-column ratio: $r_{\text{const}} = \frac{\text{cols\_1\_unique}}{M} \times 50$.
+    \item Set $P_{\text{const}} = \min(10, r_{\text{const}})$.
+  \end{enumerate}
+
+  \item Compute skewness penalty $P_{\text{skew}}$:
+  \begin{enumerate}
+    \item Identify numerical columns; let count be $M_{\text{num}}$.
+    \item For each numerical column, mark as highly skewed if $|\text{skew}| > 3$.
+    \item Let $\text{highly\_skewed\_cols}$ be the count of highly skewed columns.
+    \item Compute $r_{\text{skew}} = \frac{\text{highly\_skewed\_cols}}{M_{\text{num}}} \times 30$.
+    \item Set $P_{\text{skew}} = \min(20, r_{\text{skew}})$.
+  \end{enumerate}
+
+  \item Aggregate penalties and compute final score:
+  \begin{enumerate}
+    \item $\text{Score}_{\text{final}} = 100 - (P_{\text{null}} + P_{\text{dup}} + P_{\text{const}} + P_{\text{skew}})$.
+  \end{enumerate}
+\end{enumerate}
+
+\subsection{Algorithm 2: Outlier Detection and Treatment}
+
+This algorithm supports IQR and Z-score methods for outlier detection. The user selects the method and action (remove or cap) for each numerical attribute.
+
+\textbf{Input:} Numerical column $X = \{x_1, x_2, \ldots, x_N\}$, method type (IQR or Z-score), and treatment type (remove or cap).
+
+\textbf{Output:} Cleaned numerical column $X'$.
+
+\begin{enumerate}
+  \item If method type is IQR:
+  \begin{enumerate}
+    \item Compute $Q1$ and $Q3$.
+    \item Compute $\text{IQR} = Q3 - Q1$.
+    \item Compute bounds: $\text{LB} = Q1 - 1.5 \times \text{IQR}$, $\text{UB} = Q3 + 1.5 \times \text{IQR}$.
+    \item For each $x_i$: if $x_i < \text{LB}$ or $x_i > \text{UB}$, remove or cap accordingly.
+  \end{enumerate}
+
+  \item If method type is Z-score:
+  \begin{enumerate}
+    \item Compute mean $\mu$ and standard deviation $\sigma$.
+    \item For each $x_i$: compute $Z_i = \frac{x_i - \mu}{\sigma}$.
+    \item If $|Z_i| > 3$, remove or cap accordingly.
+  \end{enumerate}
+\end{enumerate}
+
+
+\section{Results and Discussion}
+
+The effectiveness of IDCAS was evaluated by comparing it against a baseline manual cleaning workflow using spreadsheets and ad hoc scripts. The evaluation focused on time to clean, data quality score improvement, outlier handling, and user effort for small--medium tabular datasets (5,000--20,000 rows, 10--25 columns).
+
+\subsection{Comparative Analysis}
+
+The effectiveness of IDCAS was evaluated using a subset of the UCI Adult Census Income dataset~\cite{ref_uci}, consisting of approximately 10,000 rows and 14 columns exhibiting various data quality issues, including missing values, duplicates, and skewed numerical distributions. The baseline manual workflow was conducted by three independent data analysts over five separate trials to ensure the reproducibility and reliability of the reported metrics. In these trials, analysts cleaned the dataset using standard spreadsheet software and ad hoc Python scripts, while the IDCAS workflow utilized the integrated end-to-end pipeline.
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Metric} & \textbf{Manual} & \textbf{IDCAS} \\ 
+\midrule
+Avg.\ cleaning time (per dataset) & 30 min & 4 min \\
+Quality score (before $\rightarrow$ after) & $62 \rightarrow 81$ & $62 \rightarrow 89$ \\
+Duplicate removal accuracy & $\approx 90\%$ & $> 98\%$ \\
+Outlier handling coverage & Few numeric cols & All numeric cols \\
+User actions (per run) & 15--20 & 4--6 \\
+Pipeline reproducibility & Low & High \\
+\bottomrule
+\end{tabular}
+\caption{Manual data cleaning vs.\ IDCAS on a 10,000-row dataset.}
+\label{tab:idcas-comparison}
+\end{table}
+
+In this scenario, the manual workflow across all trials required an average of 25--35 minutes to complete a comprehensive cleaning pass, including issue identification, filter application, and script-based validation. IDCAS reduced the average processing time to approximately 4 minutes per pass, primarily spent on configuring cleaning parameters and reviewing the statistical meta-profile. 
+ The deterministic data quality score increased from 62 (original) to 81 after careful manual cleaning, while the same dataset cleaned via IDCAS achieved a score of 89 due to more systematic treatment of outliers and constant columns.
+
+\subsection{Graphical Comparison}
+
+A visual comparison of the key metrics is shown in Figure~\ref{fig:performance-graph}, highlighting improvements in cleaning time and quality score.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\linewidth]{genimg.png}%
+    \caption{Comparison of cleaning time and data quality score for manual workflow vs.\ IDCAS.}
+    \label{fig:performance-graph}
+\end{figure}
+
+\subsection{Analysis of Results}
+
+The comparison indicates that IDCAS outperforms the manual baseline across both efficiency and consistency:
+
+\begin{itemize}
+    \item \textbf{Cleaning Time:} IDCAS reduces the end-to-end cleaning time from approximately 30 minutes to around 4 minutes per dataset, representing an almost 85\% reduction in latency. This is achieved by automating repetitive operations such as imputations, outlier detection, and duplicate removal through vectorized Pandas/NumPy operations triggered by a few UI actions.
+
+    \item \textbf{Data Quality Score:} The manual process improved the deterministic data quality score from 62 to 81, whereas IDCAS increased it from 62 to 89 in a single pass. The additional gain stems from applying a uniform penalty-aware cleaning strategy over all columns, including highly skewed numeric features and constant columns, which are often overlooked in ad hoc workflows.
+
+    \item \textbf{Accuracy and Coverage of Cleaning Operations:} Duplicate removal in manual workflows relies on filters and partial matching rules, leading to an estimated 90\% accuracy, while IDCAS systematically identifies duplicates across the full dataset and achieves above 98\% coverage on the tested data. Likewise, outlier handling is often restricted to a few important columns in manual cleaning, whereas IDCAS executes IQR- or Z-score-based detection for all numeric attributes according to the configured policy.
+
+    \item \textbf{User Effort and Reproducibility:} The manual workflow required 15--20 individual actions (filters, formula edits, script reruns), and the exact sequence was not fully documented. In contrast, IDCAS consolidated the process into 4--6 structured UI actions (upload, review, configure options, clean, optional AI query, export), while automatically maintaining an audit trail and a Markdown report that captures each operation. This greatly improves reproducibility and makes it easier to reuse the pipeline across similar datasets.
+\end{itemize}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\linewidth]{vis.png}
+    \caption{Visualization of the data cleaning process: dirty data vs.\ cleaned data with quality metrics.}
+    \label{fig:vis}
+\end{figure}
+
+\subsection{Implementation Screenshots}
+
+To illustrate the practical use of IDCAS, four key stages of the system are shown via screenshots.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\linewidth]{dashboard.png}
+    \caption{IDCAS upload interface for CSV/PDF files and initial dataset selection.}
+    \label{fig:dashboard}
+\end{figure}
+
+Figure~\ref{fig:dashboard} shows the upload screen, where the user selects a CSV or PDF file and triggers parsing. Once the file is processed, IDCAS computes an initial data quality score and displays high-level metadata such as row/column counts and null distributions.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\linewidth]{errorpage.png}
+    \caption{Dirty data grid and exploratory visualizations for numeric and categorical attributes.}
+    \label{fig:errorpage}
+\end{figure}
+
+Figure~\ref{fig:errorpage} presents the dirty data view and EDA panel, where users inspect the raw table alongside histograms for numeric fields and bar charts for categorical variables. This helps identify missing values, skewness, and outliers before applying cleaning operations.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\linewidth]{clnoptions.png}
+    \caption{Cleaning configuration panel specifying null handling, outlier methods, and text formatting options.}
+    \label{fig:clnoptions}
+\end{figure}
+
+Figure~\ref{fig:clnoptions} shows the cleaning configuration panel, where users choose strategies for numeric and text nulls, select IQR or Z-score for outlier handling, and define text formatting operations. After applying these settings, IDCAS executes vectorized operations on the backend and updates the data quality score.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\linewidth]{llm.png}
+    \caption{AI assistant feedback on data readiness and export options for cleaned CSV and audit report.}
+    \label{fig:llm}
+\end{figure}
+
+Finally, Figure~\ref{fig:llm} illustrates the AI assistant chat and export stage. The LLM receives the statistical meta-profile of the dataset and provides natural-language feedback on data readiness for tasks such as regression or classification. A key enhancement to this stage is the ``AI Auto-Suggest'' feature, which allows users to instantly configure the cleaning pipeline based on LLM recommendations. Furthermore, the system supports a novel ``Notebook-to-Code'' export option, enabling users to download a runnable Jupyter Notebook that reproduces the entire cleaning process alongside the standard cleaned CSV and Markdown audit report.
+
+\subsection{Limitations}
+
+While IDCAS demonstrates significant improvements in data preparation efficiency, several limitations must be acknowledged. First, the current evaluation was focused on small-to-medium sized tabular datasets (up to 20,000 rows); the performance of the local LLM reasoning and the FastAPI processing engine on significantly larger datasets remains to be thoroughly tested. Second, the responses generated by the Llama~3 model are inherently non-deterministic, which may lead to variations in the expert-style guidance provided across different sessions. Finally, the system relies on a local instance of Ollama, meaning that its availability and performance are constrained by the underlying hardware resources of the host machine, particularly GPU memory and compute capacity.
+
+\section{Conclusion and Future Scope}
+
+The experimental comparison suggests that IDCAS is a more effective solution for tabular data cleaning than traditional manual workflows. By combining deterministic statistical scoring, AI-driven configuration suggestions, and local LLM-based critique in a single web-based platform, IDCAS reduces cleaning time, improves overall data quality, and ensures 100\% reproducibility through its novel Jupyter Notebook export feature.
+
+Future work includes evaluating IDCAS on a broader range of real-world datasets, integrating more advanced anomaly detection and schema inference techniques, and extending the AI assistant to propose more complex feature engineering strategies based on specific domain requirements.
+
+\begin{thebibliography}{10}
+
+\bibitem{ref1}
+A.~Ng, A.~Karmakar, and J.~Rosenberg,
+``Data-Centric AI: Why Data Quality Matters,''
+\textit{Communications of the ACM},
+vol.~64, no.~7, pp.~86--90, 2021,
+doi: 10.1145/3446378.
+
+\bibitem{ref2}
+S.~Zhang, Z.~Huang, and E.~Wu,
+``Data Cleaning Using Large Language Models (Cocoon),''
+\textit{arXiv preprint}, 2024,
+doi: 10.48550/arXiv.2410.15547.
+
+\bibitem{ref3}
+F.~Biester, M.~Abdelaal, and D.~Del~Gaudio,
+``LLMClean: Context-Aware Tabular Data Cleaning via LLM-Generated OFDs,''
+\textit{arXiv preprint}, 2024,
+doi: 10.48550/arXiv.2404.18681.
+
+\bibitem{ref4}
+J.~Zhu, X.~Zhao, Y.~Sun, S.~Song, and X.~Yuan,
+``Relational Data Cleaning Meets Artificial Intelligence: A Survey,''
+\textit{Journal of Data and Information Quality}, 2024,
+doi: 10.1007/s41019-024-00266-7.
+
+\bibitem{ref5}
+H.~M.~Yasin and A.~K.~Khorsheed,
+``Automated Data Cleaning in Large Databases Using Machine Learning Methods,''
+\textit{Asian J. Res. Comput. Sci.}, 2025,
+doi: 10.9734/ajrcos/2025/v18i5661.
+
+\bibitem{ref6}
+V.~Panwar,
+``AI-Powered Data Cleansing: Innovative Approaches for Ensuring Database Integrity,''
+\textit{Int. J. Comput. Trends Technol.}, 2024,
+doi: 10.14445/22312803/IJCTT-V72I4P115.
+
+\bibitem{ref7}
+M.~Guo \textit{et al.},
+``Normal Workflow and Key Strategies for Data Cleaning Toward Real-World Data,''
+\textit{Interact. J. Med. Res.}, 2023,
+doi: 10.2196/44310.
+
+\bibitem{ref8}
+J.~K.~Pilowsky, R.~Elliott, and M.~A.~Roche,
+``Data Cleaning for Clinician Researchers: Application of a Data-Quality Framework,''
+\textit{Aust. Crit. Care}, 2024,
+doi: 10.1016/j.aucc.2024.03.004.
+
+\bibitem{ref9}
+S.~Krishnan \textit{et al.},
+``ActiveClean: Interactive Data Cleaning for Statistical Modeling,''
+\textit{Proc. VLDB Endow.}, vol.~9, no.~12, pp.~948--959, 2016,
+doi: 10.14778/2977760.2977763.
+
+\bibitem{ref10}
+P.~Barlas,
+``Data Cleaning, Discard Studies, and Discretionary Power,''
+in \textit{Proc. AIES}, 2025,
+doi: 10.1609/aies.v7i2.31893.
+
+\bibitem{ref_uci}
+UCI Machine Learning Repository,
+``Adult Census Income Dataset,''
+2024, [Online]. Available: https://archive.ics.uci.edu/ml/datasets/adult.
+
+\end{thebibliography}
+
+\end{document}
